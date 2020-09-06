@@ -1,0 +1,7 @@
+# IDE
+.idea
+
+profilePictures
+peers/migrations
+
+proto/protoc.exe
