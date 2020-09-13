@@ -48,7 +48,7 @@ class ProtobufConsumer(AsyncWebsocketConsumer):
 
 
     async def receive(self, text_data=None, binary_data=None):
-        print('Received {} and {}.'.format(text_data, binary_data))
+        # print('Received {} and {}.'.format(text_data, binary_data))
         text_data_json = json.loads(text_data)
 
         if text_data_json['type'] != 'proto_response':
@@ -61,7 +61,7 @@ class ProtobufConsumer(AsyncWebsocketConsumer):
 
 
     async def proto_request(self, event):
-        print("Proto request: " + str(event))
+        # print("Proto request: " + str(event))
         await self.send(event['data'])
 
     async def proto_response(self, event):

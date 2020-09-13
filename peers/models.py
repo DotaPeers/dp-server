@@ -1,6 +1,7 @@
 import datetime
 from PIL import Image, ImageDraw, ImageOps
 import io
+import django
 from django.db import models
 from django.db.models.query import Q
 
@@ -57,7 +58,7 @@ class Avatars(models.Model):
             raise NotImplementedError('Size identifier {} unknown.'.format(size))
 
 
-        resp = RequestsGet.get(url)
+        resp = RequestsGet.getSinglePlayer(url)
         img = Image.open(io.BytesIO(resp.content))
 
         # Create a round mask
@@ -91,19 +92,21 @@ class Player(models.Model):
     wins = models.IntegerField(default=0)
     loses = models.IntegerField(default=0)
 
-    timestamp = models.DateTimeField(null=False, default=datetime.datetime.now())
+    timestamp = models.DateTimeField(default=django.utils.timezone.now)
+    _peersLoaded = models.BooleanField(default=False)   # Determines if all of its peers were loaded
 
     def save(self, **kwargs):
         """
         Save the avatars object first, then save this object
         """
 
-        self.avatars.save()
+        if self.avatars:
+            self.avatars.save()
         super().save(**kwargs)
 
     @property
     def peers(self):
-        return list(self._from_peers_set.all()) + list(self._to_peers_set.all())
+        return self._from_peers_set.all()
 
     @property
     def games(self):
@@ -119,16 +122,20 @@ class Player(models.Model):
 
 class Peer(models.Model):
 
-    class Meta:
-        unique_together = (('player1', 'player2'),)
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='_from_peers_set')
+    player2 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='_to_peers_set')
+    data = models.ForeignKey('PeerData', on_delete=models.CASCADE, null=False)
 
-    player1 = models.ForeignKey(Player, primary_key=True, on_delete=models.CASCADE, related_name='_from_peers_set')
-    player2 = models.ForeignKey(Player, on_delete=models.CASCADE, null=False, related_name='_to_peers_set')
+    def __str__(self):
+        return f'Peer<{self.player.accountId} -> {self.player2.accountId}>'
+
+
+class PeerData(models.Model):
 
     games = models.IntegerField(null=False)
     wins = models.IntegerField(null=False)
 
-    timestamp = models.DateTimeField(null=False, default=datetime.datetime.now())
+    timestamp = models.DateTimeField(default=django.utils.timezone.now)
 
     @property
     def loses(self):
@@ -138,20 +145,8 @@ class Peer(models.Model):
     def winrate(self):
         return round(100 / self.games * self.wins, 2)
 
-    def otherPlayer(self, yourPlayer: Player) -> Player:
-        if yourPlayer != self.player1 and yourPlayer != self.player2:
-            raise RuntimeError('Wrong player {} passed to peer {}.'.format(yourPlayer, self))
-
-        if yourPlayer == self.player1:
-            return self.player2
-
-        elif yourPlayer == self.player2:
-            return self.player1
-
     def __str__(self):
-        p1 = self.player1.username if self.player1 else None
-        p2 = self.player2.username if self.player2 else None
-        return 'Peer<{} <-> {}>'.format(p1, p2)
+        return 'PeerData<>'
 
 
 class Connections(models.Model):

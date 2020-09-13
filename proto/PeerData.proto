@@ -1,71 +1,24 @@
 syntax = "proto3";
 
-//// Availability of data
-//enum Availability {
-//  AVAILABLE = 0;
-//  UNAVAILABLE = 1;
-//  OUTDATED = 2;
-//}
-//
-//// Weather an update was successful
-//enum UpdateStatus {
-//  OKAY = 0;
-//  REJECTED = 1;
-//}
-//
-//// Data about a player
-//message PlayerData {
-//  int32 accountId = 1;
-//  string username = 2;
-//  int32 rank = 3;
-//  int32 wins = 4;
-//  int32 loses = 5;
-//}
-//
-//// Requests a players data
-//message PlayerRequest {
-//  int32 accountId = 1;
-//}
-//
-//// Response containing the players data if available
-//message PlayerResponse {
-//  Availability availability = 1;
-//  PlayerData data = 2;
-//}
-//
-//
-//// Request to update a players data
-//message PlayerUpdateRequest {
-//  int64 key = 1;
-//  repeated PlayerData data = 2;
-//}
-//
-//// Response to the update
-//message PlayerUpdateResponse {
-//  int64 key = 1;
-//  repeated UpdateStatus status = 2;
-//}
-//
-//
-//// Requests to get player data
-//message PeerDataRequest {
-//  int64 key = 1;
-//  repeated PlayerRequest players = 2;
-//}
-//
-//// Response containing the data
-//message PeerDataResponse {
-//  int64 key = 1;
-//  repeated PlayerResponse players = 2;
-//}
 
+// -----  Peer Requests  -----
 
 message Peer {
-  int32 accountId1 = 1;
-  int32 accountId2 = 2;
+  int32 accountId2 = 1;
+  int32 games      = 2;
   int32 wins       = 3;
-  int32 loses      = 4;
 }
+
+message PeersRequest {
+  int32  accountId = 1;
+}
+
+message PeersResponse {
+  int32 accountId      = 1;
+  repeated Peer peers = 2;
+}
+
+// -----  Player Requests  -----
 
 message Avatars {
   string small  = 1;
@@ -89,17 +42,18 @@ message PlayerResponse {
   string countryCode  = 8;
   int32 wins          = 9;
   int32 loses         = 10;
-  repeated Peer peers = 11;
-  int64 timestamp     = 12;
 }
 
+// -----  Base Requests  -----
 
 message PeerDataRequest {
   int64 key = 1;
   repeated PlayerRequest players = 2;
+  repeated PeersRequest peers    = 3;
 }
 
 message PeerDataResponse {
   int64 key = 1;
   repeated PlayerResponse players = 2;
+  repeated PeersResponse peers    = 3;
 }
