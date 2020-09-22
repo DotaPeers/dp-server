@@ -1,3 +1,4 @@
+import os
 import datetime
 from PIL import Image, ImageDraw, ImageOps
 import io
@@ -7,7 +8,10 @@ from django.db.models.query import Q
 
 import Config
 from peers.data.Rank import Rank
+from peers.utility import getProfilePicturePath
 
+
+# -----  Custom types  -----
 
 class RankType(models.IntegerField):
     """
@@ -36,44 +40,13 @@ class RankType(models.IntegerField):
             return value
         return Rank(value)
 
+# -----  Models  -----
 
 class Avatars(models.Model):
 
     small  = models.TextField(max_length=255)
     medium = models.TextField(max_length=255)
     large  = models.TextField(max_length=255)
-
-    def downloadImage(self, size: str):
-        """
-        Downloads the profile picture and saves it to the profile pictures folder
-        """
-
-        if size.lower() == 'small':
-            url = self.small
-        elif size.lower() == 'medium':
-            url = self.medium
-        elif size.lower() == 'large':
-            url = self.large
-        else:
-            raise NotImplementedError('Size identifier {} unknown.'.format(size))
-
-
-        resp = RequestsGet.getSinglePlayer(url)
-        img = Image.open(io.BytesIO(resp.content))
-
-        # Create a round mask
-        mask = Image.new('L', img.size, 0)
-        draw = ImageDraw.Draw(mask)
-        draw.ellipse((0, 0) + img.size, fill=255)
-
-        # Apply the mask to the image
-        img_round = ImageOps.fit(img, mask.size, centering=(0.5, 0.5))
-        img_round.putalpha(mask)
-
-        img_round.save('{}/{}.png'.format(Config.PROFILE_PICTURES_FOLDER, self.player.accountId))
-
-        return True
-
 
     def __str__(self) -> str:
         return 'Avatars<>'
@@ -104,6 +77,36 @@ class Player(models.Model):
             self.avatars.save()
         super().save(**kwargs)
 
+    def _post_delete_handler(self):
+        """
+        This method gets called everytime after a Player object was deleted. This gets used to delete the avatar objects
+        and the profile pictures.
+        Without this hack the PeerData objects wouldn't get deleted
+        """
+
+        self._additional_delete()
+
+    def _additional_delete(self):
+        """
+        Delete children that wouldn't get deleted otherwise
+        """
+
+        # Delete the Avatars
+        try:
+            self.avatars.delete()
+        except Avatars.DoesNotExist:
+            pass
+        except AssertionError:
+            pass
+
+        # Delete the profile pictures
+        path = getProfilePicturePath(self.accountId) + f'/{self.accountId}.png'
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+
+
     @property
     def peers(self):
         return self._from_peers_set.all()
@@ -126,8 +129,30 @@ class Peer(models.Model):
     player2 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='_to_peers_set')
     data = models.ForeignKey('PeerData', on_delete=models.CASCADE, null=False)
 
+    def _post_delete_handler(self):
+        """
+        This method gets called everytime after a Peer object was deleted. This gets used to delete the data objects.
+        Without this hack the PeerData objects wouldn't get deleted
+        """
+
+        self._additional_delete()
+
+    def _additional_delete(self):
+        """
+        Deletes children that wouldn't get deleted otherwise
+        """
+
+        # Delete the data object, which will in turn also delete the other peer object
+        try:
+            self.data.delete()
+        except PeerData.DoesNotExist:
+            pass
+        except AssertionError:
+            pass
+
+
     def __str__(self):
-        return f'Peer<{self.player.accountId} -> {self.player2.accountId}>'
+        return f'Peer<{self.player.username} -> {self.player2.username}>'
 
 
 class PeerData(models.Model):
@@ -156,3 +181,18 @@ class Connections(models.Model):
 
     def __repr__(self):
         return 'Connection<{}>'.format(self.user_id)
+
+# -----  Django Signals  -----
+
+def post_delete_handler(sender, instance, **kwargs):
+    """
+    Dispatches all post_delete signals
+    """
+
+    if isinstance(instance, Peer):
+        instance._post_delete_handler()
+    elif isinstance(instance, Player):
+        instance._post_delete_handler()
+
+
+models.signals.post_delete.connect(post_delete_handler)

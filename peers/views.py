@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseForbidden
 from django.core.handlers.wsgi import WSGIRequest
 
+from pathlib import Path
 from typing import List, Dict
 import base64
 import hashlib, json
@@ -18,10 +19,20 @@ from django.views.generic import View
 from django.db.models import Model
 
 from peers.exceptions import InvalidChannelError
+from peers.utility import getProfilePicturePath
 
 
 PLAYER_ID = 154605920
+MAX_RECURSION_DEPTH = 1
+GAMES_MIN = 150
 
+""" ToDo:
+    - Only load data from the client that is not in the DB
+    - Reload data if it is expired
+    - Nicer looking GUI
+    - Basic website
+    - ProtoClient more exception proof
+"""
 
 def index(request: WSGIRequest):
 
@@ -30,18 +41,20 @@ def index(request: WSGIRequest):
 
 def test(request: WSGIRequest):
 
-    layer = get_channel_layer()
+    def getChannelId():
+        connections = Connections.objects.filter(user_id='id_12345')
+        if len(connections) == 0:
+            return -1
+        elif len(connections) > 1:
+            return 2
+        return connections.first().channel_id
 
-    async_to_sync(layer.group_send)('id_12345', {
-        'type': 'chat_message',
-        'message': 'Hello from View'
-    })
+    Player.objects.all().delete()
+
+    pl = PeerLoader(getChannelId(), get_channel_layer())
+    pl.load(PLAYER_ID)
 
     return HttpResponse('Testing...')
-
-
-MAX_RECURSION_DEPTH = 4
-GAMES_MIN = 150
 
 
 class ClientManager:
@@ -167,12 +180,28 @@ class ClientManager:
         except db_class.DoesNotExist:
             return None
 
+    def _savePlayerProfilePicture(self, playerResp: pdpb.PlayerResponse) -> None:
+        """
+        Tries to save the profile picture data to the images folder
+        """
+
+        with open(getProfilePicturePath(playerResp.accountId) + f'/{playerResp.accountId}.png', 'wb') as file:
+            file.write(playerResp.profilePicture)
+
     def _createPlayerObj(self, playerResp: pdpb.PlayerResponse) -> Player:
         """
         Creates a Player object in the DB from a protobuf PlayerResponse.
         :return: The freshly created DB object
         """
 
+        # Save the profile picture
+        try:
+            self._savePlayerProfilePicture(playerResp)
+        except FileNotFoundError:
+            Path(getProfilePicturePath(playerResp.accountId)).mkdir(parents=True, exist_ok=True)
+            self._savePlayerProfilePicture(playerResp)
+
+        # Create the player
         return Player.objects.create(
             accountId=playerResp.accountId,
             username=playerResp.username,

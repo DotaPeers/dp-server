@@ -23,7 +23,7 @@ class ProtobufConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _delete_connection(self, user_id):
-        old = self._get_connection(user_id)
+        old = Connections.objects.filter(user_id=user_id).first()
         if old:
             old.delete()
 
@@ -37,12 +37,12 @@ class ProtobufConsumer(AsyncWebsocketConsumer):
         self.id_name = 'id_%s' % self.id
 
         # Delete existing connections if they exist. (Remove later)
-        # await self._delete_connection(self.id_name)
+        await self._delete_connection(self.id_name)
 
         # A client is already connected
-        if await self._get_connection(self.id_name):
-            await self.disconnect(1001)
-            return
+        # if await self._get_connection(self.id_name):
+        #     await self.disconnect(1001)
+        #     return
 
         await self._add_connection(self.id_name, self.channel_name)
         await self.accept()

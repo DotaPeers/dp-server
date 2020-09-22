@@ -41,16 +41,17 @@ message PlayerRequest {
 }
 
 message PlayerResponse {
-  int32 accountId     = 1;
-  string username     = 2;
-  int32 rank          = 3;
-  bool dotaPlus       = 4;
-  string steamId      = 5;
-  Avatars avatars     = 6;
-  string profileUrl   = 7;
-  string countryCode  = 8;
-  int32 wins          = 9;
-  int32 loses         = 10;
+  int32 accountId      = 1;
+  string username      = 2;
+  int32 rank           = 3;
+  bool dotaPlus        = 4;
+  string steamId       = 5;
+  Avatars avatars      = 6;
+  string profileUrl    = 7;
+  string countryCode   = 8;
+  int32 wins           = 9;
+  int32 loses          = 10;
+  bytes profilePicture = 11;
 }
 
 // -----  Base Requests  -----

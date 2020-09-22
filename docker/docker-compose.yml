@@ -4,7 +4,8 @@ services:
   reverse_proxy:
     image: nginx
     ports:
-    - 3214:80
+    - 3214:80   # Opendota
+    - 3215:81   # Steam cdn
     volumes:
       # Two dots are the equivalent of './'
       - "../docker/nginx.conf:/etc/nginx/nginx.conf:ro"
