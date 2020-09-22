@@ -1,0 +1,4 @@
+django
+django-hamlpy
+channels
+channels-redis

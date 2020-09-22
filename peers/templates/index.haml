@@ -1,0 +1,10 @@
+- extends "base.haml"
+
+- block title
+  Index
+
+- block content
+  %h1
+    Index
+
+  %a{href: "{% url 'generate' 12345 %}"} Generate

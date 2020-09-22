@@ -1,5 +1,14 @@
 syntax = "proto3";
 
+// -----  Metadata  -----
+
+message Metadata {
+  oneof Status {
+    bool start = 1;
+    bool end = 2;
+  }
+
+}
 
 // -----  Peer Requests  -----
 
@@ -50,6 +59,7 @@ message PeerDataRequest {
   int64 key = 1;
   repeated PlayerRequest players = 2;
   repeated PeersRequest peers    = 3;
+  Metadata metadata              = 4;
 }
 
 message PeerDataResponse {

@@ -25,7 +25,7 @@ PLAYER_ID = 154605920
 
 def index(request: WSGIRequest):
 
-    return HttpResponse('Index')
+    return render(request, 'index.haml')
 
 
 def test(request: WSGIRequest):
@@ -44,8 +44,10 @@ MAX_RECURSION_DEPTH = 4
 GAMES_MIN = 150
 
 
-class DataLoader:
+class ClientManager:
     """
+    Interaction with the client.
+
     Loads Players from the DB and if they don't exist from the client.
     Peers always get loaded from the client
     """
@@ -119,7 +121,18 @@ class DataLoader:
                 playerObjects[player.accountId] = self._createPlayerObj(player)
 
         return [playerObjects[id] for id in accountIds]
-    
+
+    def sendMetadata(self, start=False, end=False) -> None:
+        assert not (start == True and end == True)
+
+        req = pdpb.PeerDataRequest()
+        if start:
+            req.metadata.start = start
+        if end:
+            req.metadata.end = end
+
+        resp = self._sendProto(req)
+
     def _sendProto(self, request: pdpb.PeerDataRequest) -> pdpb.PeerDataResponse:
         async_to_sync(self._layer.send)(self._channelId, {
             'type': 'proto_request',
@@ -188,16 +201,19 @@ class PeerLoader:
         self.channelId = channelId
         self.layer = layer
         self.username = None
-        self.dataLoader = DataLoader(channelId, layer)
+        self.clientManager = ClientManager(channelId, layer)
         self.accountId = None
         self._recursionDepthMap = dict()
 
     def load(self, accountId):
+        self.clientManager.sendMetadata(start=True)
         self.accountId = accountId
         self._recursionDepthMap = dict()
-        p = self.dataLoader.getSinglePlayer(accountId)
+        p = self.clientManager.getSinglePlayer(accountId)
 
         self._load(p, recursionDepth=0, parent=None, plist=list())
+
+        self.clientManager.sendMetadata(end=True)
 
     def _load(self, player: Player, recursionDepth=0, parent=None, plist=None):
         """
@@ -213,13 +229,13 @@ class PeerLoader:
             return
         self._recursionDepthMap[player.accountId] = recursionDepth
 
-        print(player.username + ": " + ' -> '.join([p.username for p in plist]))
+        # print(player.username + ": " + ' -> '.join([p.username for p in plist]))
 
-        peers = self.dataLoader.getSinglePeers(player.accountId).peers
+        peers = self.clientManager.getSinglePeers(player.accountId).peers
         relevantPeers = [p for p in peers if p.games >= GAMES_MIN]
 
         # Pre-Load the players required for the peers
-        targetList = self.dataLoader.getPlayers([p.accountId2 for p in relevantPeers])
+        targetList = self.clientManager.getPlayers([p.accountId2 for p in relevantPeers])
 
         assert len(relevantPeers) == len(targetList)    # Make sure the data is correct
 
@@ -232,8 +248,8 @@ class PeerLoader:
             if target in plist:
                 continue
 
-            peers1 = Peer.objects.filter(player=player, player2=target).all()
-            if not peers1:
+            peers = Peer.objects.filter(player=player, player2=target).all()
+            if not peers:
                 self._addPeers(player, target, peer.wins, peer.games)
 
             self._load(target, recursionDepth=recursionDepth + 1, parent=player, plist=plist + [player])
@@ -293,33 +309,19 @@ class GenerateView(View):
         self.id = id
 
         channelId = self.getChannelId()
+        status = 0
         if channelId == -1:
-            return HttpResponse("No agent connected.")
+            status = -1
         elif channelId == -2:
-            return HttpResponse("Multiple agents connected")
-
-        pl = PeerLoader(self.getChannelId(), self.layer)
-        pl.load(PLAYER_ID)
+            status = -2
 
 
-        return HttpResponse("Done")
+        if status == 0:
+            pl = PeerLoader(self.getChannelId(), self.layer)
+            pl.load(PLAYER_ID)
 
-    def _sendRequest(self, request: pdpb.PeerDataRequest) -> pdpb.PeerDataResponse:
-        connections = Connections.objects.filter(user_id='id_' + str(self.id))
-        if len(connections) == 0:
-            return -1
-        elif len(connections) > 1:
-            return 2
-        con = connections.first()
+        context = {
+            "status": status
+        }
 
-        async_to_sync(self.layer.send)(con.channel_id, {
-            'type': 'proto_request',
-            'data': base64.b64encode(request.SerializeToString()).decode()
-        })
-
-        resp_data = async_to_sync(self.layer.receive)(con.channel_id + 'proto')
-        resp = pdpb.PeerDataResponse()
-        resp.ParseFromString(base64.b64decode(resp_data['data']))
-
-        return resp
-
+        return render(request, 'generate.haml', context)

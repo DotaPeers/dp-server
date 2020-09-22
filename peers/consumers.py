@@ -15,8 +15,15 @@ class ProtobufConsumer(AsyncWebsocketConsumer):
         return self.channel_layer
 
     @database_sync_to_async
+    def _get_connection(self, user_id):
+        try:
+            return Connections.objects.filter(user_id=user_id).first()
+        except Connections.DoesNotExist:
+            return None
+
+    @database_sync_to_async
     def _delete_connection(self, user_id):
-        old = Connections.objects.filter(user_id=self.id_name).first()
+        old = self._get_connection(user_id)
         if old:
             old.delete()
 
@@ -30,21 +37,20 @@ class ProtobufConsumer(AsyncWebsocketConsumer):
         self.id_name = 'id_%s' % self.id
 
         # Delete existing connections if they exist. (Remove later)
-        await self._delete_connection(self.id_name)
+        # await self._delete_connection(self.id_name)
+
+        # A client is already connected
+        if await self._get_connection(self.id_name):
+            await self.disconnect(1001)
+            return
+
         await self._add_connection(self.id_name, self.channel_name)
-
-        # Join room group
-        # await self.layer.group_add(self.id_name, self.channel_name)
-
         await self.accept()
 
 
     async def disconnect(self, code):
         print('Disconnected with code {}.'.format(code))
         await self._delete_connection(self.id_name)
-
-        # Leave room group
-        # await self.layer.group_discard(self.id_name, self.channel_name)
 
 
     async def receive(self, text_data=None, binary_data=None):
