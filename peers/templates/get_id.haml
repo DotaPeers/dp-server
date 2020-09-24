@@ -1,0 +1,30 @@
+- extends "base.haml"
+- load static
+
+- block title
+  Generating unique ID
+
+- block scripts
+  %script{src: "{% static 'js/getId.js' %}"}
+
+- block content
+
+  %h1.mb-0
+    Generate
+    %span.text-primary ID
+
+  %br
+  %br
+  %br
+
+  %div.form-group
+    %label{for: "idField"} Your ID
+    %input#idField.form-control{"aria-describedby": "idHelp", placeholder: "Generating your ID", readonly}
+    %small#idHelp.form-text.text-muted
+
+  %button.btn.btn-primary{onclick: "requestId(true);"} New ID
+  %button.btn.btn-primary{onclick: ""} Next
+
+  %br
+
+

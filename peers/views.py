@@ -9,7 +9,6 @@ import hashlib, json
 from peers.models import *
 from peers.proto import PeerData_pb2 as pdpb
 import time
-import random
 from channels_redis.core import RedisChannelLayer
 from collections import defaultdict
 
@@ -23,43 +22,34 @@ from peers.utility import getProfilePicturePath
 
 
 PLAYER_ID = 154605920
-MAX_RECURSION_DEPTH = 1
+MAX_RECURSION_DEPTH = 4
 GAMES_MIN = 150
+DATA_LIFETIME = 30   # in days
+
 
 """ ToDo:
-    - Only load data from the client that is not in the DB
-    - Reload data if it is expired
+    + Only load data from the client that is not in the DB
+    + Reload data if it is expired
     - Nicer looking GUI
     - Basic website
-    - ProtoClient more exception proof
+    + ProtoClient more exception proof
 """
 
-def index(request: WSGIRequest):
 
-    return render(request, 'index.haml')
+def createId(request: WSGIRequest):
+    """
+    Creates a unique connection ID
+    """
+    metaValue = json.dumps(request.META).encode()
+    timeValue = str(time.time()).encode()
+    randValue = os.urandom(100)
 
-
-def test(request: WSGIRequest):
-
-    def getChannelId():
-        connections = Connections.objects.filter(user_id='id_12345')
-        if len(connections) == 0:
-            return -1
-        elif len(connections) > 1:
-            return 2
-        return connections.first().channel_id
-
-    Player.objects.all().delete()
-
-    pl = PeerLoader(getChannelId(), get_channel_layer())
-    pl.load(PLAYER_ID)
-
-    return HttpResponse('Testing...')
+    return hashlib.md5(metaValue + timeValue + randValue).hexdigest()
 
 
 class ClientManager:
     """
-    Interaction with the client.
+    Interaction with the client and the database.
 
     Loads Players from the DB and if they don't exist from the client.
     Peers always get loaded from the client
@@ -105,7 +95,7 @@ class ClientManager:
         resp = self._sendProto(req)
 
         return list(resp.peers)
-    
+
     def getPlayers(self, accountIds: List[int]) -> List[Player]:
         """
         Loads a list of players based of their account ids from the DB or the client.
@@ -118,7 +108,7 @@ class ClientManager:
 
         # Get the already existing players
         for accountId in accountIds:
-            playerObjects[accountId] = self._get_or_none(Player, accountId=accountId)
+            playerObjects[accountId] = self._get_player_if_valid(accountId)
 
         # Create the request object of not found players
         for accountId, playerObj in playerObjects.items():
@@ -166,6 +156,20 @@ class ClientManager:
             con = Connections.objects.get(channel_id=self._channelId)
             con.delete()
             raise InvalidChannelError(con.channel_id, con.user_id) from None
+
+    def _get_player_if_valid(self, accountId):
+        """
+        Tries to fetch a Player object from the database. The player objects gets deleted, if it's too old.
+        :return: Player object or None
+        """
+
+        player = self._get_or_none(Player, accountId=accountId)  # type: Player
+        if player:
+            if datetime.datetime.now() - player.timestamp > datetime.timedelta(days=DATA_LIFETIME):
+                player.delete()
+                return None
+
+        return player
 
     def _get_or_none(self, db_class: Model, **kwargs):
         """
@@ -219,7 +223,7 @@ class ClientManager:
             loses=playerResp.loses,
             timestamp=datetime.datetime.now()
         )
-        
+
 
 class PeerLoader:
     """
@@ -258,6 +262,10 @@ class PeerLoader:
             return
         self._recursionDepthMap[player.accountId] = recursionDepth
 
+        # Only load peers if they were not fully loaded
+        if player.peersLoaded:
+            return
+
         # print(player.username + ": " + ' -> '.join([p.username for p in plist]))
 
         peers = self.clientManager.getSinglePeers(player.accountId).peers
@@ -266,24 +274,30 @@ class PeerLoader:
         # Pre-Load the players required for the peers
         targetList = self.clientManager.getPlayers([p.accountId2 for p in relevantPeers])
 
-        assert len(relevantPeers) == len(targetList)    # Make sure the data is correct
+        assert len(relevantPeers) == len(targetList)  # Make sure the data is correct
 
         for peer, target in zip(peers, targetList):
             # Dont loop back to the parent
             if parent != None and target == parent:
                 continue
 
-            # Dont start a loop from earlier
+            # Dont loop back to an earlier player in the chain
             if target in plist:
                 continue
 
-            peers = Peer.objects.filter(player=player, player2=target).all()
-            if not peers:
+            peers = Peer.objects.filter(player=player, player2=target).first()
+            if peers:
+                # Delete the peers if they are outdated
+                if datetime.datetime.now() - peers.data.timestamp > datetime.timedelta(days=DATA_LIFETIME):
+                    peers.data.delete()
+                    self._addPeers(player, target, peer.wins, peer.games)
+
+            else:
                 self._addPeers(player, target, peer.wins, peer.games)
 
             self._load(target, recursionDepth=recursionDepth + 1, parent=player, plist=plist + [player])
 
-        player._peersLoaded = True
+        player.peersLoaded = True
         player.save()
 
     def _addPeers(self, player, target, games, wins):
@@ -302,10 +316,85 @@ class PeerLoader:
         peer2.save()
 
 
+def index(request: WSGIRequest):
+
+    return render(request, 'index.haml')
+
+
+def test(request: WSGIRequest):
+
+    def getChannelId():
+        connections = Connections.objects.filter(user_id='id_12345')
+        if len(connections) == 0:
+            return -1
+        elif len(connections) > 1:
+            return 2
+        return connections.first().channel_id
+
+    Player.objects.all().delete()
+
+    pl = PeerLoader(getChannelId(), get_channel_layer())
+    pl.load(PLAYER_ID)
+
+    return HttpResponse('Testing...')
+
+
+class InformationView(View):
+
+    def get(self, request: WSGIRequest):
+        return render(request, 'information.haml')
+
+
+class AboutView(View):
+
+    def get(self, request: WSGIRequest):
+        return render(request, 'about.haml')
+
+
+class GetIdView(View):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.request = None     # type: WSGIRequest
+
+    def get(self, request: WSGIRequest):
+        self.request = request
+
+        return render(request, 'get_id.haml')
+
+    def post(self, request: WSGIRequest):
+        self.request = request
+
+        post = dict(request.POST)
+
+        if 'requestId' in post:
+            if 'new' in post['requestId']:
+                return self.requestId(new=True)
+            return self.requestId()
+
+        raise RuntimeError(f"Unknown POST data {post}.")
+
+    def requestId(self, new=False):
+        """
+        Generates the ID for the user
+        :param new: If True requests a new ID, even if one exists already
+        :return: The ID
+        """
+
+        if not new:
+            if 'userId' in self.request.session:
+                return HttpResponse(json.dumps({'id': self.request.session['userId'], 'status': 'SESSION'}))
+
+        userId = createId(self.request)
+        self.request.session['userId'] = userId
+
+        return HttpResponse(json.dumps({'id': userId, 'status': 'NEW'}))
+
+
 class GenerateView(View):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._layer = get_channel_layer()
         self.request = None
         self.id = None
@@ -313,17 +402,6 @@ class GenerateView(View):
     @property
     def layer(self) -> RedisChannelLayer:
         return self._layer
-
-    def createId(self):
-        """
-        Creates a unique connection ID
-        """
-
-        metaValue = json.dumps(self.request.META).encode()
-        timeValue = str(time.time()).encode()
-        randValue = random.randbytes(100)
-
-        return hashlib.md5(metaValue + timeValue + randValue).hexdigest()
 
     def getChannelId(self):
         connections = Connections.objects.filter(user_id='id_' + str(self.id))

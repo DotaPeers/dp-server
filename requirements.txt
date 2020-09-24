@@ -4,3 +4,4 @@ channels
 channels-redis
 protobuf
 mypy-protobuf
+psycopg2

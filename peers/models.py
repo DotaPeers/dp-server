@@ -66,7 +66,7 @@ class Player(models.Model):
     loses = models.IntegerField(default=0)
 
     timestamp = models.DateTimeField(default=django.utils.timezone.now)
-    _peersLoaded = models.BooleanField(default=False)   # Determines if all of its peers were loaded
+    peersLoaded = models.BooleanField(default=False)   # Determines if all of its peers were loaded
 
     def save(self, **kwargs):
         """

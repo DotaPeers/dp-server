@@ -19,6 +19,10 @@ from peers import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('test', views.test, name='test'),
+    path('infos', views.InformationView.as_view(), name='information'),
+    path('getId', views.GetIdView.as_view(), name='getId'),
     path('gen/<int:id>', views.GenerateView.as_view(), name='generate'),
+    path('about', views.AboutView.as_view(), name='about'),
+    path('test', views.test, name='test'),
 ]
+
