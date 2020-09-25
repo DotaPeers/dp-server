@@ -1,6 +1,7 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
 from django.core.handlers.wsgi import WSGIRequest
+from peers.shortcuts import HttpResponse
 
 from pathlib import Path
 from typing import List, Dict
@@ -17,7 +18,7 @@ from asgiref.sync import async_to_sync
 from django.views.generic import View
 from django.db.models import Model
 
-from peers.exceptions import InvalidChannelError, ConnectionError
+from peers.exceptions import InvalidChannelError, ConnectionError, PlayerNotExistError
 from peers.utility import getProfilePicturePath
 
 
@@ -31,8 +32,15 @@ DATA_LIFETIME = 30   # in days
     + Only load data from the client that is not in the DB
     + Reload data if it is expired
     - Nicer looking GUI
-    - Basic website
+    + Basic website
     + ProtoClient more exception proof
+    - Logger
+    - Dockerfile to start the server
+"""
+
+""" Credits:
+    - Website template
+    - medals logos
 """
 
 
@@ -197,6 +205,9 @@ class ClientManager:
         Creates a Player object in the DB from a protobuf PlayerResponse.
         :return: The freshly created DB object
         """
+
+        if not playerResp.exists:
+            raise PlayerNotExistError(playerResp.accountId)
 
         # Save the profile picture
         try:
@@ -388,12 +399,12 @@ class GetIdView(View):
 
         if not new:
             if 'userId' in self.request.session:
-                return HttpResponse(json.dumps({'id': self.request.session['userId'], 'status': 'SESSION'}))
+                return HttpResponse({'id': self.request.session['userId'], 'status': 'SESSION'})
 
         userId = createId(self.request)
         self.request.session['userId'] = userId
 
-        return HttpResponse(json.dumps({'id': userId, 'status': 'NEW'}))
+        return HttpResponse({'id': userId, 'status': 'NEW'})
 
     def checkAgentConnected(self):
         response = {
@@ -407,7 +418,7 @@ class GetIdView(View):
             if conn:
                 response['connected'] = True
 
-        return HttpResponse(json.dumps(response))
+        return HttpResponse(response)
 
 
 class GenerateView(View):
@@ -430,7 +441,7 @@ class GenerateView(View):
         post = dict(request.POST)
 
         if 'playerId' in post:
-            return self.onPlayerIdFormSubmit(int(post.get('playerId')[0]))
+            return self.onPlayerIdFormSubmit(post.get('playerId')[0])
 
         if 'startGenerationFor' in post:
             return self.downloadDataFor(int(post.get('startGenerationFor')[0]))
@@ -438,24 +449,29 @@ class GenerateView(View):
         raise RuntimeError(f"Unknown POST data {post}.")
 
     def _getClientManager(self):
-        connections = Connections.objects.filter(user_id='id_' + str(self.request.session['userId']))
+        userId = str(self.request.session['userId'])
+        connections = Connections.objects.filter(user_id=f'id_{userId}')
         if len(connections) == 0:
-            raise ConnectionError("No connection found.", 1)
+            raise ConnectionError(1, userId)
         elif len(connections) > 1:
-            raise ConnectionError("Multiple connections found.", 2)
+            raise ConnectionError(2, userId)
         channelId = connections.first().channel_id
 
         return ClientManager(channelId, get_channel_layer())
 
-    def onPlayerIdFormSubmit(self, playerId):
+    def onPlayerIdFormSubmit(self, playerId: str):
         clientManager = self._getClientManager()
 
         if not playerId or playerId == '':
-            return HttpResponse("The player ID can't be empty.", status=555)
+            return HttpResponse({'status': 'INVALID_ID'})
 
-        player = clientManager.getSinglePlayer(playerId)
+        try:
+            player = clientManager.getSinglePlayer(int(playerId))
+        except PlayerNotExistError:
+            return HttpResponse({'status': 'PLAYER_NOT_EXISTING'})
 
         context = {
+            'status': 'OK',
             'picturePath': f'/static/{getProfilePicturePath(playerId)}',
             'accountId': player.accountId,
             'username': player.username,
@@ -468,14 +484,16 @@ class GenerateView(View):
             'rankPath': f'/static/img/medals/medal-{player.rank.convertBack()}.webp',
         }
 
-        return HttpResponse(json.dumps(context))
+        return HttpResponse(context)
 
     def downloadDataFor(self, playerId: int):
 
         pl = PeerLoader(self._getClientManager())
         pl.load(PLAYER_ID)
 
-        return HttpResponse(json.dumps({"status": "Done"}))
+        time.sleep(5)
+
+        return HttpResponse({"status": "Done"})
 
 
 class GenView(View):

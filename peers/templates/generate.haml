@@ -14,8 +14,21 @@
 
   %br
 
+  <!--  Alert: No agent  -->
   %div#agentDisconnectedAlert.alert.alert-danger{role: "alert", style: "display: none;"}
     ⚠️ Agent lost connection! Make sure that the agent is sill running and is connected to the right ID.
+
+  <!--  Alert: Invalid Player ID  -->
+  %div#invalidIdAlert.alert.alert-danger{role: "alert", style: "display: none;"}
+    %span.mr-3 ⚠️ Invalid player ID. Can't be empty and can only contain of numbers.
+    %button.close{type: "button", data-dismiss: "alert", aria-label: "close"}
+      %span{aria-hidden: "true"}&times;
+
+  <!--  Alert: Player not found  -->
+  %div#playerNotExistAlert.alert.alert-danger{role: "alert", style: "display: none;"}
+    %span.mr-3 ⚠️ No player exists for this ID or his account is private.
+    %button.close{type: "button", data-dismiss: "alert", aria-label: "close"}
+      %span{aria-hidden: "true"}&times;
 
   %br
   %br
@@ -26,6 +39,7 @@
   %br
   %br
 
+  <!--  Form: Id input  -->
   %form#playerIdForm
     %div.form-group
       %input#playerIdField.form-control{"aria-describedby": "playerIdHelp", placeholder: "Your Player ID", name: "playerId"}
@@ -40,12 +54,20 @@
     %span.text-primary Information
 
   %br
+
+  <!--  Alert: Download in progress  -->
+  %div#downloadInProgressAlert.alert.alert-success{role: "alert", style: "display: none;"}
+    Data download in progress. Take a look at your client for more information.
+
   %br
 
+  <!--  Player information  -->
   %div.container
     %div.row
+      <!--  Player infos: Profile picture  -->
       %img#pProfilePicture.col-3{src: "{% static '/img/default-profile-picture.png' %}"}
 
+      <!--  Player infos: First column  -->
       %div.col-4.p-5
         %span.font-weight-bold.text-primary.h4.mr-2
           Username:
@@ -69,6 +91,7 @@
           Country code:
         %span#pTextCountryCode.h4= "---"
 
+      <!--  Player infos: Second column  -->
       %div.col-3.p-5
         %span.font-weight-bold.text-primary.h4.mr-2
           Games:
@@ -92,10 +115,12 @@
           Dota Plus:
         %span#pTextDotaPlus.h4= "---"
 
+      <!--  Player infos: Medal  -->
       %div.col-1
         %img#pRankImage{src: "/static/img/medals/medal-0.webp"}
 
     %div.row
+      <!--  Start download button  -->
       %div.col-xl-5
       %div.col-xl-6
         %button#startDownloadBtn.btn.btn-primary.p-2.pl-5.pr-5{onclick: "startGeneration()", disabled}
@@ -103,5 +128,8 @@
             Start Downloading
           %span#startDownloadLoader.spinner-border.ml-2{style: "display: none;"}
 
+  %br
+  %br
+  %br
   %br
   %br

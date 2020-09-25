@@ -1,2 +1,3 @@
 
 PROFILE_PICTURES_FOLDER = 'profilePictures'
+MAX_RECURSION_DEPTH = 3

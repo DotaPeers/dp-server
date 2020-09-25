@@ -1,3 +1,11 @@
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "webserver.settings")
+import django
+django.setup()
+
+from peers.models import *
+from peers.utility import getProfilePicturePath
+
 import networkx as nx
 from fa2 import ForceAtlas2
 from fa2l import force_atlas2_layout
@@ -8,8 +16,8 @@ import pyvis
 from pyvis.network import Network
 from pyvis import options
 
-from database.database import get_session
-from database.models import *
+
+PLAYER_ID = 154605920
 
 
 class GraphGenerator:
@@ -58,7 +66,7 @@ class GraphGenerator:
         G.add_node(player.username,
                    size=self._gamesToNodeSize(player.games),
                    shape='image',
-                   image='{}/{}.png'.format(Config.PROFILE_PICTURES_FOLDER, player.accountId),
+                   image='{}/{}'.format(Config.PROFILE_PICTURES_FOLDER, getProfilePicturePath(player.accountId)),
                    title="Username: {} <br> County: {} <br>Games: {} <br>Wins: {} <br>Loses: {} <br>Winrate: {} <br>Rank: {}"
                    .format(player.username, player.countryCode, player.games, player.wins, player.loses, player.winrate,
                            player.rank.toStr()),
@@ -66,32 +74,33 @@ class GraphGenerator:
 
     def _addEdge(self, G: nx.Graph, player: Player, peer: Peer):
         player1 = player
-        player2 = peer.otherPlayer(player)
+        player2 = peer.player2
+        data = peer.data
 
         G.add_edge(player1.username, player2.username,
-                   weight=self._gamesToEdgeWeight(peer.games),
-                   value=self._gamesToEdgeValue(peer.games),
+                   weight=self._gamesToEdgeWeight(data.games),
+                   value=self._gamesToEdgeValue(data.games),
                    title='{} -> {} <br>Games: {} <br>Wins: {} <br>Loses: {} <br>Winrate: {}'
-                   .format(player1.username, player2.username, peer.games, peer.wins, peer.loses, peer.winrate),
+                   .format(player1.username, player2.username, data.games, data.wins, data.loses, data.winrate),
                    )
 
     def _getEdges(self, G: nx.Graph, player: Player, depth=0, parent: Player = None):
 
+        if player.username not in G.nodes:
+            self._addNode(G, player)
+
         for p in player.peers:
-            p1 = p.player1.username
+            p1 = p.player.username
             p2 = p.player2.username
 
-            if p1 not in G.nodes:
-                self._addNode(G, p.player1)
-
-            if p2 not in G.nodes:
+            if p.player2.username not in G.nodes:
                 self._addNode(G, p.player2)
 
             if not G.has_edge(p1, p2) and not G.has_edge(p2, p1):
                 self._addEdge(G, player, p)
 
             if depth < Config.MAX_RECURSION_DEPTH:
-                self._getEdges(G, p.otherPlayer(player), depth=depth + 1, parent=player)
+                self._getEdges(G, p.player2, depth=depth + 1, parent=player)
 
     def _getOptions(self):
         opt = options.Options()
@@ -101,8 +110,7 @@ class GraphGenerator:
     def _getGraphData(self):
         G = nx.Graph()
 
-        session = get_session()
-        player = session.query(Player).filter_by(accountId=154605920).first()
+        player = Player.objects.get(accountId=PLAYER_ID)
 
         self._getEdges(G, player, depth=0, parent=None)
 
@@ -175,7 +183,7 @@ class GraphGenerator:
         G = self._getGraphData()
 
         # Generate the positions of the nodes
-        pos = self._forceAtlas2Layout_1(G, 100000)
+        pos = self._forceAtlas2Layout_1(G, 10000)
         # pos = self._forceAtlas2Layout_2(G, 1000)
 
         # Add the generated positions to the nodes

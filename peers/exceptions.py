@@ -21,9 +21,24 @@ class InvalidChannelError(RuntimeError):
 
 class ConnectionError(RuntimeError):
 
-    def __init__(self, msg, type):
-        self.msg = msg
+    def __init__(self, type, userId):
         self.type = type
+        if type == 1:
+            self.msg = f"No connection for user ID {userId} found."
+        elif type == 2:
+            self.msg = f"Multiple connections for user ID {userId} found."
+        else:
+            self.msg = f"Invalid ConnectionError type {self.type}."
 
     def __str__(self):
-        return 'ConnectionError'
+        return f"{self.msg} ({self.type})"
+
+
+class PlayerNotExistError(RuntimeError):
+
+    def __init__(self, accountId):
+        self.accountId = accountId
+
+    def __str__(self):
+        return f"No player exists for the account Id {self.accountId}"
+
