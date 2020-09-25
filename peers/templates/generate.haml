@@ -13,6 +13,10 @@
     %span.text-primary Player ID
 
   %br
+
+  %div#agentDisconnectedAlert.alert.alert-danger{role: "alert", style: "display: none;"}
+    ⚠️ Agent lost connection! Make sure that the agent is sill running and is connected to the right ID.
+
   %br
   %br
 
@@ -27,12 +31,9 @@
       %input#playerIdField.form-control{"aria-describedby": "playerIdHelp", placeholder: "Your Player ID", name: "playerId"}
       %small#playerIdHelp.form-text.text-muted
 
-    %button.btn.btn-primary.p-2.pl-5.pr-5{onclick: "formSubmit()"} Enter
+    %button#enterBtn.btn.btn-primary.p-2.pl-5.pr-5{onclick: "formSubmit()", disabled} Enter
 
   %hr.mt-5.mb-5
-
-  %div#agentDisconnectedAlert.alert.alert-danger{role: "alert", style: "display: none;"}
-    Agent lost connection! Make sure that the agent is sill running and is connected to the right ID.
 
   %h2.mb-0
     Player

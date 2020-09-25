@@ -433,7 +433,7 @@ class GenerateView(View):
             return self.onPlayerIdFormSubmit(int(post.get('playerId')[0]))
 
         if 'startGenerationFor' in post:
-            return self.downloadDataFro(int(post.get('startGenerationFor')[0]))
+            return self.downloadDataFor(int(post.get('startGenerationFor')[0]))
 
         raise RuntimeError(f"Unknown POST data {post}.")
 
@@ -470,7 +470,7 @@ class GenerateView(View):
 
         return HttpResponse(json.dumps(context))
 
-    def downloadDataFro(self, playerId: int):
+    def downloadDataFor(self, playerId: int):
 
         pl = PeerLoader(self._getClientManager())
         pl.load(PLAYER_ID)

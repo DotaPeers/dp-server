@@ -86,11 +86,13 @@ function startGeneration() {
 
 
 function checkAgentConnectedLoop() {
+    checkAgentConnected();
     const interval = setInterval(checkAgentConnected, 2000);
 }
 
 /*
 *  Checks if the agent is connected.
+*  Changes website design depending on the connection status.
 */
 function checkAgentConnected() {
     $.ajax({
@@ -100,14 +102,23 @@ function checkAgentConnected() {
         success: function (data) {
             data = JSON.parse(data);
             imgObj = document.getElementById("userIdImg");
+            alertObj = document.getElementById("agentDisconnectedAlert");
+            enterBtn = document.getElementById("enterBtn");
+            startBtn = document.getElementById("startDownloadBtn");
 
             if (data["connected"]) {
                 imgObj.src = "/static/img/connectedIcon.png";
                 imgObj.title = "Agent connected."
+                alertObj.style.display = "none";
+                enterBtn.disabled = false;
+                startBtn.disabled = false;
 
             } else {
                 imgObj.src = "/static/img/notConnectedIcon.png";
                 imgObj.title = "Agent not connected."
+                alertObj.style.display = "inline-block";
+                enterBtn.disabled = true;
+                startBtn.disabled = true;
             }
         },
         error: function (data) {
