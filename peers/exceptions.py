@@ -17,3 +17,13 @@ class InvalidChannelError(RuntimeError):
 
     def __str__(self):
         return f"Found invalid channel {self.channelId} for user {self.userId}."
+
+
+class ConnectionError(RuntimeError):
+
+    def __init__(self, msg, type):
+        self.msg = msg
+        self.type = type
+
+    def __str__(self):
+        return 'ConnectionError'

@@ -23,8 +23,25 @@
     %small#idHelp.form-text.text-muted
 
   %button.btn.btn-primary{onclick: "requestId(true);"} New ID
-  %button.btn.btn-primary{onclick: ""} Next
+
+  %hr.mt-5.mb-5
+
+  %h2.mb-0
+    Connect your
+    %span.text-primary Agent
 
   %br
 
+  Connect your agent. It takes up to 10 seconds for the page to notice the connection. If the connection is established,
+  you can continue with the next step.
 
+  %br
+  %br
+
+  %span.text-black-50.h4 Agent connected:
+    %span#agentConnected.h4.text-primary False
+
+  %br
+  %br
+
+  %button#nextBtn.btn.btn-primary.p-2.pl-5.pr-5{onclick: "window.location.href = \"{% url 'generate' %}\"", disabled} Next

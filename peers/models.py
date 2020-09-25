@@ -100,7 +100,7 @@ class Player(models.Model):
             pass
 
         # Delete the profile pictures
-        path = getProfilePicturePath(self.accountId) + f'/{self.accountId}.png'
+        path = Config.PROFILE_PICTURES_FOLDER + '/' + getProfilePicturePath(self.accountId)
         try:
             os.remove(path)
         except FileNotFoundError:

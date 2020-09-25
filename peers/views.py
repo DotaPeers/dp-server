@@ -17,7 +17,7 @@ from asgiref.sync import async_to_sync
 from django.views.generic import View
 from django.db.models import Model
 
-from peers.exceptions import InvalidChannelError
+from peers.exceptions import InvalidChannelError, ConnectionError
 from peers.utility import getProfilePicturePath
 
 
@@ -189,7 +189,7 @@ class ClientManager:
         Tries to save the profile picture data to the images folder
         """
 
-        with open(getProfilePicturePath(playerResp.accountId) + f'/{playerResp.accountId}.png', 'wb') as file:
+        with open(Config.PROFILE_PICTURES_FOLDER + '/' + getProfilePicturePath(playerResp.accountId), 'wb') as file:
             file.write(playerResp.profilePicture)
 
     def _createPlayerObj(self, playerResp: pdpb.PlayerResponse) -> Player:
@@ -230,11 +230,9 @@ class PeerLoader:
     Loads the peers for a player.
     """
 
-    def __init__(self, channelId: str, layer: RedisChannelLayer):
-        self.channelId = channelId
-        self.layer = layer
+    def __init__(self, clientManager: ClientManager):
+        self.clientManager = clientManager
         self.username = None
-        self.clientManager = ClientManager(channelId, layer)
         self.accountId = None
         self._recursionDepthMap = dict()
 
@@ -360,7 +358,11 @@ class GetIdView(View):
     def get(self, request: WSGIRequest):
         self.request = request
 
-        return render(request, 'get_id.haml')
+        context = {
+            'id_active': True,
+        }
+
+        return render(request, 'get_id.haml', context)
 
     def post(self, request: WSGIRequest):
         self.request = request
@@ -371,6 +373,9 @@ class GetIdView(View):
             if 'new' in post['requestId']:
                 return self.requestId(new=True)
             return self.requestId()
+
+        if 'agentConnected' in post:
+            return self.checkAgentConnected()
 
         raise RuntimeError(f"Unknown POST data {post}.")
 
@@ -390,8 +395,90 @@ class GetIdView(View):
 
         return HttpResponse(json.dumps({'id': userId, 'status': 'NEW'}))
 
+    def checkAgentConnected(self):
+        response = {
+            'connected': False
+        }
+
+        userId = self.request.session['userId'] if 'userId' in self.request.session else None
+
+        if userId:
+            conn = Connections.objects.filter(user_id=f'id_{userId}')
+            if conn:
+                response['connected'] = True
+
+        return HttpResponse(json.dumps(response))
+
 
 class GenerateView(View):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.request = None  # type: WSGIRequest
+
+    def get(self, request: WSGIRequest):
+        self.request = request
+
+        context = {
+            'id_active': True,
+        }
+
+        return render(request, 'generate.haml', context)
+
+    def post(self, request: WSGIRequest):
+
+        post = dict(request.POST)
+
+        if 'playerId' in post:
+            return self.onPlayerIdFormSubmit(int(post.get('playerId')[0]))
+
+        if 'startGenerationFor' in post:
+            return self.downloadDataFro(int(post.get('startGenerationFor')[0]))
+
+        raise RuntimeError(f"Unknown POST data {post}.")
+
+    def _getClientManager(self):
+        connections = Connections.objects.filter(user_id='id_' + str(self.request.session['userId']))
+        if len(connections) == 0:
+            raise ConnectionError("No connection found.", 1)
+        elif len(connections) > 1:
+            raise ConnectionError("Multiple connections found.", 2)
+        channelId = connections.first().channel_id
+
+        return ClientManager(channelId, get_channel_layer())
+
+    def onPlayerIdFormSubmit(self, playerId):
+        clientManager = self._getClientManager()
+
+        if not playerId or playerId == '':
+            return HttpResponse("The player ID can't be empty.", status=555)
+
+        player = clientManager.getSinglePlayer(playerId)
+
+        context = {
+            'picturePath': f'/static/{getProfilePicturePath(playerId)}',
+            'accountId': player.accountId,
+            'username': player.username,
+            'steamId': player.steamId,
+            'countryCode': player.countryCode,
+            'games': player.games,
+            'wins': player.wins,
+            'loses': player.loses,
+            'dotaPlus': player.dotaPlus,
+            'rankPath': f'/static/img/medals/medal-{player.rank.convertBack()}.webp',
+        }
+
+        return HttpResponse(json.dumps(context))
+
+    def downloadDataFro(self, playerId: int):
+
+        pl = PeerLoader(self._getClientManager())
+        pl.load(PLAYER_ID)
+
+        return HttpResponse(json.dumps({"status": "Done"}))
+
+
+class GenView(View):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -431,4 +518,4 @@ class GenerateView(View):
             "status": status
         }
 
-        return render(request, 'generate.haml', context)
+        return render(request, 'gen.haml', context)

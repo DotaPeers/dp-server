@@ -1,12 +1,106 @@
 - extends "base.haml"
+- load static
 
 - block title
   Generate
 
+- block scripts
+  %script{src: "{% static 'js/generate.js' %}"}
+
 - block content
-  - if status == -1
-    No agent connected
-  - elif status == -2
-    Multiple agents connected
-  - else
-    Done
+  %h1.mb-0
+    Enter
+    %span.text-primary Player ID
+
+  %br
+  %br
+  %br
+
+  %span
+    Enter your DotA2 ID.
+
+  %br
+  %br
+
+  %form#playerIdForm
+    %div.form-group
+      %input#playerIdField.form-control{"aria-describedby": "playerIdHelp", placeholder: "Your Player ID", name: "playerId"}
+      %small#playerIdHelp.form-text.text-muted
+
+    %button.btn.btn-primary.p-2.pl-5.pr-5{onclick: "formSubmit()"} Enter
+
+  %hr.mt-5.mb-5
+
+  %div#agentDisconnectedAlert.alert.alert-danger{role: "alert", style: "display: none;"}
+    Agent lost connection! Make sure that the agent is sill running and is connected to the right ID.
+
+  %h2.mb-0
+    Player
+    %span.text-primary Information
+
+  %br
+  %br
+
+  %div.container
+    %div.row
+      %img#pProfilePicture.col-3{src: "{% static '/img/default-profile-picture.png' %}"}
+
+      %div.col-4.p-5
+        %span.font-weight-bold.text-primary.h4.mr-2
+          Username:
+        %span#pTextUsername.h4= "---"
+
+        %br.m-3
+
+        %span.font-weight-bold.text-primary.h4.mr-2
+          Dota ID:
+        %span#pTextAccountId.h4= "---"
+
+        %br.m-3
+
+        %span.font-weight-bold.text-primary.h4.mr-2
+          Steam ID:
+        %span#pTextSteamId.h4= "---"
+
+        %br.m-3
+
+        %span.font-weight-bold.text-primary.h4.mr-2
+          Country code:
+        %span#pTextCountryCode.h4= "---"
+
+      %div.col-3.p-5
+        %span.font-weight-bold.text-primary.h4.mr-2
+          Games:
+        %span#pTextGames.h4= "---"
+
+        %br.m-3
+
+        %span.font-weight-bold.text-primary.h4.mr-2
+          Wins:
+        %span#pTextWins.h4= "---"
+
+        %br.m-3
+
+        %span.font-weight-bold.text-primary.h4.mr-2
+          Loses:
+        %span#pTextLoses.h4= "---"
+
+        %br.m-3
+
+        %span.font-weight-bold.text-primary.h4.mr-2
+          Dota Plus:
+        %span#pTextDotaPlus.h4= "---"
+
+      %div.col-1
+        %img#pRankImage{src: "/static/img/medals/medal-0.webp"}
+
+    %div.row
+      %div.col-xl-5
+      %div.col-xl-6
+        %button#startDownloadBtn.btn.btn-primary.p-2.pl-5.pr-5{onclick: "startGeneration()", disabled}
+          %span.h3.text-white-50
+            Start Downloading
+          %span#startDownloadLoader.spinner-border.ml-2{style: "display: none;"}
+
+  %br
+  %br

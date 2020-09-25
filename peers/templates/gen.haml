@@ -1,0 +1,12 @@
+- extends "base.haml"
+
+- block title
+  Generate
+
+- block content
+  - if status == -1
+    No agent connected
+  - elif status == -2
+    Multiple agents connected
+  - else
+    Done

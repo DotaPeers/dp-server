@@ -64,6 +64,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'webserver.contextProcessors.id_part_active'
             ],
             'loaders': [
                 'hamlpy.template.loaders.HamlPyFilesystemLoader',
@@ -76,6 +77,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'webserver.wsgi.application'
 
 ASGI_APPLICATION = "webserver.routing.application"
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 100 * 60     # in seconds
 
 
 CHANNEL_LAYERS = {
@@ -148,5 +152,6 @@ STATIC_ROOT = ''
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
-    Path.joinpath(BASE_DIR, 'static')
+    Path.joinpath(BASE_DIR, 'static'),
+    Path.joinpath(BASE_DIR, 'profilePictures'),
 ]

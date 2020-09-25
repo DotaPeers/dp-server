@@ -21,8 +21,9 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('infos', views.InformationView.as_view(), name='information'),
     path('getId', views.GetIdView.as_view(), name='getId'),
-    path('gen/<int:id>', views.GenerateView.as_view(), name='generate'),
+    path('generate', views.GenerateView.as_view(), name='generate'),
     path('about', views.AboutView.as_view(), name='about'),
+    path('gen/<str:id>', views.GenView.as_view(), name='gen'),
     path('test', views.test, name='test'),
 ]
 

@@ -8,4 +8,4 @@ def getProfilePicturePath(accountId: int):
     a = id_str[0]
     b = id_str[1]
 
-    return f'profilePictures/{a}/{b}'
+    return f'{a}/{b}/{accountId}.png'
