@@ -213,7 +213,7 @@ class ClientManager:
         try:
             self._savePlayerProfilePicture(playerResp)
         except FileNotFoundError:
-            Path(getProfilePicturePath(playerResp.accountId)).mkdir(parents=True, exist_ok=True)
+            Path(Config.PROFILE_PICTURES_FOLDER + '/' + getProfilePicturePath(playerResp.accountId)).parent.mkdir(parents=True, exist_ok=True)
             self._savePlayerProfilePicture(playerResp)
 
         # Create the player
