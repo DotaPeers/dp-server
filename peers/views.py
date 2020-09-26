@@ -23,7 +23,7 @@ from peers.utility import getProfilePicturePath
 
 
 PLAYER_ID = 154605920
-MAX_RECURSION_DEPTH = 4
+MAX_RECURSION_DEPTH = 3
 GAMES_MIN = 150
 DATA_LIFETIME = 30   # in days
 
@@ -220,7 +220,7 @@ class ClientManager:
         return Player.objects.create(
             accountId=playerResp.accountId,
             username=playerResp.username,
-            rank=playerResp.rank,
+            rank=Rank(playerResp.rank),
             dotaPlus=playerResp.dotaPlus,
             steamId=playerResp.steamId,
             avatars=Avatars(
@@ -470,6 +470,7 @@ class GenerateView(View):
         except PlayerNotExistError:
             return HttpResponse({'status': 'PLAYER_NOT_EXISTING'})
 
+        print("")
         context = {
             'status': 'OK',
             'picturePath': f'/static/{getProfilePicturePath(playerId)}',

@@ -2,7 +2,6 @@
 .idea
 
 profilePictures
-peers/migrations
 
 proto/protoc.exe
 db.sqlite3

@@ -34,7 +34,7 @@ function setInputFilter(textbox, inputFilter) {
 function validateEnterBtn() {
     enterBtn = document.getElementById("enterBtn");
 
-    if (agentConnected) {
+    if (agentConnected && !isDownloading) {
         enterBtn.disabled = false;
     } else {
         enterBtn.disabled = true;
@@ -52,6 +52,14 @@ function validateStartBtn() {
     } else {
         startBtn.disabled = true;
     }
+}
+
+/*
+* Shortcut for both validate Btn functions.
+*/
+function validateBtns() {
+    validateEnterBtn();
+    validateStartBtn();
 }
 
 
@@ -78,7 +86,7 @@ function formSubmit() {
                 document.getElementById("pTextLoses").textContent =    response["loses"];
                 document.getElementById("pTextDotaPlus").textContent = response["dotaPlus"];
 
-                validateStartBtn();
+                validateBtns();
 
                 document.getElementById("invalidIdAlert").style.display = "none";
                 document.getElementById("playerNotExistAlert").style.display = "none";
@@ -105,7 +113,7 @@ function startGeneration() {
         data: {"startGenerationFor": playerId},
         beforeSend: function () {
             isDownloading = true;
-            validateStartBtn();
+            validateBtns();
             document.getElementById("startDownloadLoader").style.display = "inline-block";
             document.getElementById("downloadInProgressAlert").style.display = "inline-block";
         },
@@ -113,7 +121,7 @@ function startGeneration() {
             data = JSON.parse(response);
 
             isDownloading = false;
-            validateStartBtn();
+            validateBtns();
             document.getElementById("startDownloadLoader").style.display = "none";
             document.getElementById("downloadInProgressAlert").style.display = "none";
         },
@@ -121,7 +129,7 @@ function startGeneration() {
             console.log("Error" + data);
 
             isDownloading = false;
-            validateStartBtn();
+            validateBtns();
             document.getElementById("startDownloadLoader").style.display = "none";
             document.getElementById("downloadInProgressAlert").style.display = "none";
         }
@@ -161,8 +169,7 @@ function checkAgentConnected() {
                 alertObj.style.display = "inline-block";
             }
 
-            validateEnterBtn();
-            validateStartBtn();
+            validateBtns();
         },
         error: function (data) {
             console.log("Error" + data);

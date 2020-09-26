@@ -1,5 +1,5 @@
 
-def getProfilePicturePath(accountId: int):
+def getProfilePicturePath(accountId):
     """
     Used to split filenames into subdirectories to prevent having one directory with too many files.
     """
