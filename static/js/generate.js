@@ -62,7 +62,9 @@ function validateBtns() {
     validateStartBtn();
 }
 
-
+/*
+* Function for the "Enter" Button Form
+*/
 function formSubmit() {
     $('#playerIdForm').ajaxForm({
         url: "/generate",
@@ -105,7 +107,9 @@ function formSubmit() {
     });
 }
 
-
+/*
+* Function for the "Start Generation" Button
+*/
 function startGeneration() {
     $.ajax({
         url: 'generate',
@@ -124,6 +128,8 @@ function startGeneration() {
             validateBtns();
             document.getElementById("startDownloadLoader").style.display = "none";
             document.getElementById("downloadInProgressAlert").style.display = "none";
+
+            window.location.href = "/create";
         },
         error: function (data) {
             console.log("Error" + data);

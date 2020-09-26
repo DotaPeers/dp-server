@@ -1,5 +1,4 @@
 
-
 def id_part_active(request):
     return {
         'id_active': False,

@@ -100,12 +100,15 @@ class Player(models.Model):
             pass
 
         # Delete the profile pictures
-        path = Config.PROFILE_PICTURES_FOLDER + '/' + getProfilePicturePath(self.accountId)
         try:
-            os.remove(path)
+            os.remove(self.profilePicturePath)
         except FileNotFoundError:
             pass
 
+
+    @property
+    def profilePicturePath(self):
+        return getProfilePicturePath(self.accountId)
 
     @property
     def peers(self):
@@ -181,6 +184,9 @@ class Connections(models.Model):
 
     def __repr__(self):
         return 'Connection<{}>'.format(self.user_id)
+
+
+
 
 # -----  Django Signals  -----
 

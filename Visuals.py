@@ -4,7 +4,6 @@ import django
 django.setup()
 
 from peers.models import *
-from peers.utility import getProfilePicturePath
 
 import networkx as nx
 from fa2 import ForceAtlas2
@@ -22,8 +21,8 @@ PLAYER_ID = 154605920
 
 class GraphGenerator:
 
-    def __init__(self):
-        pass
+    def __init__(self, player):
+        self.player = player
 
     def __linearGamesToSize(self, games: int):
         size = games / 100
@@ -66,7 +65,7 @@ class GraphGenerator:
         G.add_node(player.username,
                    size=self._gamesToNodeSize(player.games),
                    shape='image',
-                   image='{}/{}'.format(Config.PROFILE_PICTURES_FOLDER, getProfilePicturePath(player.accountId)),
+                   image=player.profilePicturePath,
                    title="Username: {} <br> County: {} <br>Games: {} <br>Wins: {} <br>Loses: {} <br>Winrate: {} <br>Rank: {}"
                    .format(player.username, player.countryCode, player.games, player.wins, player.loses, player.winrate,
                            player.rank.toStr()),
@@ -110,9 +109,7 @@ class GraphGenerator:
     def _getGraphData(self):
         G = nx.Graph()
 
-        player = Player.objects.get(accountId=PLAYER_ID)
-
-        self._getEdges(G, player, depth=0, parent=None)
+        self._getEdges(G, self.player, depth=0, parent=None)
 
         return G
 
@@ -195,13 +192,14 @@ class GraphGenerator:
     def generateGraph(self):
         G, pos = self.generateNetwork()
 
-        nt = Network(height='90%', width='100%', heading="Dota Peers for Archangel Azrael")
+        nt = Network(height='90%', width='100%', heading=f"Dota Peers for {self.player.username}")
         nt.toggle_physics(False)
         nt.from_nx(G)
 
-        nt.show('nt.html')
+        nt.save_graph(f'{Config.GRAPH_PATHS}/{self.player.accountId}.html')
 
 
 if __name__ == '__main__':
-    gen = GraphGenerator()
+    player = Player.objects.get(accountId=PLAYER_ID)
+    gen = GraphGenerator(player)
     gen.generateGraph()

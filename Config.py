@@ -1,3 +1,4 @@
 
 PROFILE_PICTURES_FOLDER = 'profilePictures'
+GRAPH_PATHS = 'graphs'
 MAX_RECURSION_DEPTH = 3

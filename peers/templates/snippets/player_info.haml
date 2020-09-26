@@ -1,0 +1,60 @@
+- load static
+
+<!--  Player information  -->
+
+%div.container
+  %div.row
+    <!--  Player infos: Profile picture  -->
+    %img#pProfilePicture.col-3{src: "{{ playerData.picturePath }}"}
+
+    <!--  Player infos: First column  -->
+    %div.col-4.p-5
+      %span.font-weight-bold.text-primary.h4.mr-2
+        Username:
+      %span#pTextUsername.h4= playerData.username
+
+      %br.m-3
+
+      %span.font-weight-bold.text-primary.h4.mr-2
+        Dota ID:
+      %span#pTextAccountId.h4= playerData.accountId
+
+      %br.m-3
+
+      %span.font-weight-bold.text-primary.h4.mr-2
+        Steam ID:
+      %span#pTextSteamId.h4= playerData.steamId
+
+      %br.m-3
+
+      %span.font-weight-bold.text-primary.h4.mr-2
+        Country code:
+      %span#pTextCountryCode.h4= playerData.countryCode
+
+    <!--  Player infos: Second column  -->
+    %div.col-3.p-5
+      %span.font-weight-bold.text-primary.h4.mr-2
+        Games:
+      %span#pTextGames.h4= playerData.games
+
+      %br.m-3
+
+      %span.font-weight-bold.text-primary.h4.mr-2
+        Wins:
+      %span#pTextWins.h4= playerData.wins
+
+      %br.m-3
+
+      %span.font-weight-bold.text-primary.h4.mr-2
+        Loses:
+      %span#pTextLoses.h4= playerData.loses
+
+      %br.m-3
+
+      %span.font-weight-bold.text-primary.h4.mr-2
+        Dota Plus:
+      %span#pTextDotaPlus.h4= playerData.dotaPlus
+
+    <!--  Player infos: Medal  -->
+    %div.col-1
+      %img#pRankImage{src: "{{ playerData.rankPath }}"}

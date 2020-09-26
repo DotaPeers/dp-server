@@ -1,0 +1,47 @@
+- extends "base.haml"
+- load static
+- load inclusions
+
+- block title
+  Create Graphic
+
+- block scripts
+  %script{src: "{% static 'js/create.js' %}"}
+
+- block content
+  %h1.mb-0
+    Player
+    %span.text-primary Information
+
+  %br
+  %br
+
+  <!--  Player information  -->
+  - include_playerinfo
+
+  %hr.mt-5.mb-5
+
+
+  %h2.mb-0
+    Graph
+    %span.text-primary Generation
+
+  %br
+
+  %span
+    Clicking this button will start the graph generation. Nice.
+
+  %br
+  %br
+  %br
+
+  %div.container
+    %div.row
+      <!--  Start download button  -->
+      %div.col-xl-5
+      %div.col-xl-6
+        %button#startDownloadBtn.btn.btn-primary.p-2.pl-5.pr-5{onclick: "startGraphGeneration({{ playerInfoId }})"}
+          %span.h3.text-white-50
+            Start Graph Generation
+          %span#startGenLoader.spinner-border.ml-2{style: "display: none;"}
+

@@ -1,3 +1,5 @@
+import Config
+
 
 def getProfilePicturePath(accountId):
     """
@@ -8,4 +10,4 @@ def getProfilePicturePath(accountId):
     a = id_str[0]
     b = id_str[1]
 
-    return f'{a}/{b}/{accountId}.png'
+    return f'{Config.PROFILE_PICTURES_FOLDER}/{a}/{b}/{accountId}.png'

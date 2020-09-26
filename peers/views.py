@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, Http404
 from django.core.handlers.wsgi import WSGIRequest
 from peers.shortcuts import HttpResponse
 
@@ -20,6 +20,8 @@ from django.db.models import Model
 
 from peers.exceptions import InvalidChannelError, ConnectionError, PlayerNotExistError
 from peers.utility import getProfilePicturePath
+from peers.templatetags.inclusions import PlayerInfoData
+from Visuals import GraphGenerator
 
 
 PLAYER_ID = 154605920
@@ -197,7 +199,7 @@ class ClientManager:
         Tries to save the profile picture data to the images folder
         """
 
-        with open(Config.PROFILE_PICTURES_FOLDER + '/' + getProfilePicturePath(playerResp.accountId), 'wb') as file:
+        with open(getProfilePicturePath(playerResp.accountId), 'wb') as file:
             file.write(playerResp.profilePicture)
 
     def _createPlayerObj(self, playerResp: pdpb.PlayerResponse) -> Player:
@@ -213,7 +215,7 @@ class ClientManager:
         try:
             self._savePlayerProfilePicture(playerResp)
         except FileNotFoundError:
-            Path(Config.PROFILE_PICTURES_FOLDER + '/' + getProfilePicturePath(playerResp.accountId)).parent.mkdir(parents=True, exist_ok=True)
+            Path(getProfilePicturePath(playerResp.accountId)).parent.mkdir(parents=True, exist_ok=True)
             self._savePlayerProfilePicture(playerResp)
 
         # Create the player
@@ -433,11 +435,12 @@ class GenerateView(View):
         context = {
             'id_active': True,
         }
+        context.update(PlayerInfoData(playerId=None).toDict())
 
         return render(request, 'generate.haml', context)
 
     def post(self, request: WSGIRequest):
-
+        self.request = request
         post = dict(request.POST)
 
         if 'playerId' in post:
@@ -470,20 +473,12 @@ class GenerateView(View):
         except PlayerNotExistError:
             return HttpResponse({'status': 'PLAYER_NOT_EXISTING'})
 
-        print("")
+        self.request.session['selectedPlayerId'] = player.accountId
+
         context = {
-            'status': 'OK',
-            'picturePath': f'/static/{getProfilePicturePath(playerId)}',
-            'accountId': player.accountId,
-            'username': player.username,
-            'steamId': player.steamId,
-            'countryCode': player.countryCode,
-            'games': player.games,
-            'wins': player.wins,
-            'loses': player.loses,
-            'dotaPlus': player.dotaPlus,
-            'rankPath': f'/static/img/medals/medal-{player.rank.convertBack()}.webp',
+
         }
+        context.update(PlayerInfoData(playerId=playerId).toDict())
 
         return HttpResponse(context)
 
@@ -495,6 +490,39 @@ class GenerateView(View):
         time.sleep(5)
 
         return HttpResponse({"status": "Done"})
+
+
+class CreateVisualsView(View):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.request = None     # type: WSGIRequest
+
+    def get(self, request: WSGIRequest):
+        self.request = request
+
+        context = {
+            'playerInfoId': self.request.session.get('selectedPlayerId', None)
+        }
+
+        return render(request, 'create.haml', context)
+
+    def post(self, request: WSGIRequest):
+        self.request = request
+        post = dict(request.POST)
+
+        if 'startCreation' in post:
+            return self.onStartGenerationClick()
+
+        raise RuntimeError(f"Unknown POST data {post}.")
+
+    def onStartGenerationClick(self):
+
+        player = Player.objects.get(accountId=self.request.session.get('selectedPlayerId', None))
+        gen = GraphGenerator(player)
+        gen.generateGraph()
+
+        return HttpResponse({"status": 'OK'})
 
 
 class GenView(View):
@@ -538,3 +566,33 @@ class GenView(View):
         }
 
         return render(request, 'gen.haml', context)
+
+
+# -----  Static Views  -----
+
+
+class GraphView(View):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get(self, request: WSGIRequest, accountId: int):
+
+        with open(f'{Config.GRAPH_PATHS}/{accountId}.html', 'r') as file:
+            pageData = file.read()
+
+        return HttpResponse(pageData)
+
+
+class ProfilePicturesPath(View):
+
+    def get(self, request: WSGIRequest, nbr1, nbr2, name):
+        path = f'{Config.PROFILE_PICTURES_FOLDER}/{nbr1}/{nbr2}/{name}'
+
+        try:
+            with open(path, 'rb') as file:
+                return HttpResponse(file.read(), content_type='image/png')
+
+        except FileNotFoundError:
+            raise Http404(f"Path '{path}' not found.")
+
