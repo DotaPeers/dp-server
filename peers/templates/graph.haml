@@ -1,0 +1,41 @@
+- extends "base.haml"
+- load static
+
+- block title
+  Enter your Dota Id
+
+- block scripts
+  %script{src: "{% static 'js/inputFilter.js' %}"}
+  %script{src: "{% static 'js/graph.js' %}"}
+
+- block content
+  %h1.mb-0
+    Enter
+    %span.text-primary Player ID
+
+  %br
+
+  <!--  Alert: Invalid Player ID  -->
+  %div#invalidIdAlert.alert.alert-danger{role: "alert", style: "display: none;"}
+    %span.mr-3 ⚠️ No graph found for this player. Generate on first.
+    %button.close{type: "button", aria-label: "close"}
+      %span{aria-hidden: "true"}&times;
+
+  %br
+
+  %span
+    Enter a Dota 2 ID for which you want to display the graph. You must have generated a graph first. If you haven't done
+    so, click
+    %a{href: "{% url 'getId' %}"} here
+    \.
+
+  %br
+  %br
+
+  %form#playerIdForm
+    %div.form-group
+      %input#playerIdField.form-control{"aria-describedby": "playerIdHelp", placeholder: "Your Player ID", name: "playerId"}
+      %small#playerIdHelp.form-text.text-muted
+
+    %button#enterBtn.btn.btn-primary.p-2.pl-5.pr-5{onclick: "formSubmit()"} Enter
+

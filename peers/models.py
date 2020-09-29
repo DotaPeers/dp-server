@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import datetime
 from PIL import Image, ImageDraw, ImageOps
 import io
@@ -8,7 +9,7 @@ from django.db.models.query import Q
 
 import Config
 from peers.data.Rank import Rank
-from peers.utility import getProfilePicturePath
+from peers.utility import getProfilePicturePath, getGraphPath
 
 
 # -----  Custom types  -----
@@ -184,9 +185,6 @@ class Connections(models.Model):
 
     def __repr__(self):
         return 'Connection<{}>'.format(self.user_id)
-
-
-
 
 # -----  Django Signals  -----
 

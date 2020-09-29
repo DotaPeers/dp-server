@@ -65,7 +65,7 @@ class GraphGenerator:
         G.add_node(player.username,
                    size=self._gamesToNodeSize(player.games),
                    shape='image',
-                   image=player.profilePicturePath,
+                   image='/' + player.profilePicturePath,
                    title="Username: {} <br> County: {} <br>Games: {} <br>Wins: {} <br>Loses: {} <br>Winrate: {} <br>Rank: {}"
                    .format(player.username, player.countryCode, player.games, player.wins, player.loses, player.winrate,
                            player.rank.toStr()),
@@ -189,17 +189,18 @@ class GraphGenerator:
 
         return G, pos
 
-    def generateGraph(self):
+    def generateGraph(self) -> Network:
         G, pos = self.generateNetwork()
 
         nt = Network(height='90%', width='100%', heading=f"Dota Peers for {self.player.username}")
         nt.toggle_physics(False)
         nt.from_nx(G)
 
-        nt.save_graph(f'{Config.GRAPH_PATHS}/{self.player.accountId}.html')
+        return nt
 
 
 if __name__ == '__main__':
     player = Player.objects.get(accountId=PLAYER_ID)
     gen = GraphGenerator(player)
-    gen.generateGraph()
+    nt = gen.generateGraph()
+    nt.save_graph(f'{Config.GRAPH_PATHS}/{PLAYER_ID}.html')

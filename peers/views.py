@@ -19,7 +19,7 @@ from django.views.generic import View
 from django.db.models import Model
 
 from peers.exceptions import InvalidChannelError, ConnectionError, PlayerNotExistError
-from peers.utility import getProfilePicturePath
+from peers.utility import getProfilePicturePath, safeOpen
 from peers.templatetags.inclusions import PlayerInfoData
 from Visuals import GraphGenerator
 
@@ -194,14 +194,6 @@ class ClientManager:
         except db_class.DoesNotExist:
             return None
 
-    def _savePlayerProfilePicture(self, playerResp: pdpb.PlayerResponse) -> None:
-        """
-        Tries to save the profile picture data to the images folder
-        """
-
-        with open(getProfilePicturePath(playerResp.accountId), 'wb') as file:
-            file.write(playerResp.profilePicture)
-
     def _createPlayerObj(self, playerResp: pdpb.PlayerResponse) -> Player:
         """
         Creates a Player object in the DB from a protobuf PlayerResponse.
@@ -212,11 +204,8 @@ class ClientManager:
             raise PlayerNotExistError(playerResp.accountId)
 
         # Save the profile picture
-        try:
-            self._savePlayerProfilePicture(playerResp)
-        except FileNotFoundError:
-            Path(getProfilePicturePath(playerResp.accountId)).parent.mkdir(parents=True, exist_ok=True)
-            self._savePlayerProfilePicture(playerResp)
+        with safeOpen(getProfilePicturePath(playerResp.accountId), 'wb') as file:
+            file.write(playerResp.profilePicture)
 
         # Create the player
         return Player.objects.create(
@@ -517,15 +506,46 @@ class CreateVisualsView(View):
         raise RuntimeError(f"Unknown POST data {post}.")
 
     def onStartGenerationClick(self):
-
         player = Player.objects.get(accountId=self.request.session.get('selectedPlayerId', None))
         gen = GraphGenerator(player)
-        gen.generateGraph()
+        nt = gen.generateGraph()
+
+        path = Path(getGraphPath(player.accountId))
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+        nt.save_graph(path.as_posix())
 
         return HttpResponse({"status": 'OK'})
 
 
+class GraphEnterIdView(View):
+
+    def get(self, request: WSGIRequest):
+        return render(request, 'graph.haml')
+
+    def post(self, request: WSGIRequest):
+
+        post = dict(request.POST)
+
+        if 'playerId' in post:
+            return self.existsGraph(post['playerId'][0])
+
+        raise RuntimeError(f"Unknown POST data {post}.")
+
+    def existsGraph(self, accountId: str):
+        path = Path(getGraphPath(accountId))
+
+        if path.exists():
+            return HttpResponse({"status": "OK"})
+
+        return HttpResponse({"status": "NOT_FOUND"})
+
+
 class GenView(View):
+    """
+    Debug only
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -578,10 +598,16 @@ class GraphView(View):
 
     def get(self, request: WSGIRequest, accountId: int):
 
-        with open(f'{Config.GRAPH_PATHS}/{accountId}.html', 'r') as file:
-            pageData = file.read()
+        path = Path(getGraphPath(accountId))
 
-        return HttpResponse(pageData)
+        try:
+            with open(path.as_posix(), 'r') as file:
+                pageData = file.read()
+
+            return HttpResponse(pageData)
+
+        except FileNotFoundError:
+            raise Http404(f"No graph for player {accountId} found.")
 
 
 class ProfilePicturesPath(View):

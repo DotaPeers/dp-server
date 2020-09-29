@@ -25,6 +25,7 @@ urlpatterns = [
     path('getId', views.GetIdView.as_view(), name='getId'),
     path('generate', views.GenerateView.as_view(), name='generate'),
     path('create', views.CreateVisualsView.as_view(), name='create'),
+    path('graph', views.GraphEnterIdView.as_view(), name='enterGraph'),
     path('graph/<int:accountId>', views.GraphView.as_view(), name='graph'),
     path('about', views.AboutView.as_view(), name='about'),
     path('gen/<str:id>', views.GenView.as_view(), name='gen'),

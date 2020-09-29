@@ -6,6 +6,7 @@
   Generate
 
 - block scripts
+  %script{src: "{% static 'js/inputFilter.js' %}"}
   %script{src: "{% static 'js/generate.js' %}"}
 
 - block content
@@ -22,13 +23,13 @@
   <!--  Alert: Invalid Player ID  -->
   %div#invalidIdAlert.alert.alert-danger{role: "alert", style: "display: none;"}
     %span.mr-3 ⚠️ Invalid player ID. Can't be empty and can only contain of numbers.
-    %button.close{type: "button", data-dismiss: "alert", aria-label: "close"}
+    %button.close{type: "button", aria-label: "close"}
       %span{aria-hidden: "true"}&times;
 
   <!--  Alert: Player not found  -->
   %div#playerNotExistAlert.alert.alert-danger{role: "alert", style: "display: none;"}
     %span.mr-3 ⚠️ No player exists for this ID or his account is private.
-    %button.close{type: "button", data-dismiss: "alert", aria-label: "close"}
+    %button.close{type: "button", aria-label: "close"}
       %span{aria-hidden: "true"}&times;
 
   %br
